@@ -9,11 +9,6 @@ export class githubBranchHelper {
   ) {}
 
   async sync(): Promise<Branch[]> {
-    // Check if branch sync is enabled in the configuration
-    if (!this.config.gitlab.sync?.branches.enabled) {
-      return []
-    }
-
     try {
       // Colorful console log for fetching branches
       core.info('\x1b[36m🌿 Fetching GitHub Branches...\x1b[0m')
@@ -35,7 +30,7 @@ export class githubBranchHelper {
       const processedBranches: Branch[] = branches
         .filter(
           (branch: GitHubBranch) =>
-            this.config.gitlab.sync?.branches.protected || !branch.protected
+            this.config.github.sync?.branches.protected || !branch.protected
         )
         .map((branch: GitHubBranch) => ({
           name: branch.name,
@@ -45,7 +40,7 @@ export class githubBranchHelper {
 
       // Log successful branch fetch
       core.info(
-        `\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches\x1b[0m`
+        `\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches (${processedBranches.map((branch: Branch) => branch.name).join(', ')})\x1b[0m`
       )
       return processedBranches
     } catch (error) {

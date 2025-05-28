@@ -31,16 +31,11 @@ export class gitlabBranchHelper {
   }
 
   async sync(): Promise<Branch[]> {
-    if (!this.config.github.sync?.branches.enabled) {
-      return []
-    }
-
     try {
       core.info('\x1b[36m🌿 Fetching GitLab Branches...\x1b[0m')
 
       const projectId = await this.getProjectId()
       const branches = await this.gitlab.Branches.all(projectId)
-
       // Extract repo path from first branch API URL
       if (branches.length > 0 && !this.repoPath) {
         const apiUrl = branches[0]._links?.self || ''
@@ -51,20 +46,25 @@ export class gitlabBranchHelper {
         }
       }
 
-      const processedBranches = branches.map(
-        (branch: {
-          name: string
-          commit: { id: string }
-          protected: boolean
-        }) => ({
+      interface GitLabBranch {
+        name: string
+        commit: { id: string }
+        protected: boolean
+      }
+
+      const processedBranches: Branch[] = branches
+        .filter(
+          (branch: GitLabBranch) =>
+            this.config.gitlab.sync?.branches.protected || !branch.protected
+        )
+        .map((branch: GitLabBranch) => ({
           name: branch.name,
           sha: branch.commit.id,
           protected: branch.protected
-        })
-      )
+        }))
 
       core.info(
-        `\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches\x1b[0m`
+        `\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches (${processedBranches.map((branch: Branch) => branch.name).join(', ')})\x1b[0m`
       )
       return processedBranches
     } catch (error) {

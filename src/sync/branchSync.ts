@@ -55,6 +55,9 @@ export async function syncBranches(
   target: GitHubClient | GitLabClient
 ): Promise<void> {
   try {
+    core.info(
+      `🔄 Starting branch synchronization from ${source.getRepoInfo().url} to ${target.getRepoInfo().url}`
+    )
     // Fetch branches from both repositories
     const sourceBranches = await source.syncBranches()
     const targetBranches = await target.syncBranches()
