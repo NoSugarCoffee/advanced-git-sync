@@ -4,7 +4,7 @@ export declare class githubBranchHelper {
     private repo;
     private config;
     constructor(octokit: any, repo: Repository, config: Config);
-    sync(): Promise<Branch[]>;
+    sync(filterByConfig?: boolean): Promise<Branch[]>;
     update(name: string, commitSha: string): Promise<void>;
     create(name: string, commitSha: string): Promise<void>;
 }

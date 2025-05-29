@@ -30,7 +30,7 @@ export class gitlabBranchHelper {
     return null
   }
 
-  async sync(): Promise<Branch[]> {
+  async sync(filterByConfig: boolean = true): Promise<Branch[]> {
     try {
       core.info('\x1b[36m🌿 Fetching GitLab Branches...\x1b[0m')
 
@@ -52,23 +52,44 @@ export class gitlabBranchHelper {
         protected: boolean
       }
 
-      const processedBranches: Branch[] = branches
-        .filter(
-          (branch: GitLabBranch) =>
-            this.config.gitlab.sync?.branches.protected || !branch.protected
-        )
-        .map((branch: GitLabBranch) => ({
+      // Map branches to our internal format
+      let processedBranches: Branch[] = branches.map(
+        (branch: GitLabBranch) => ({
           name: branch.name,
           sha: branch.commit.id,
           protected: branch.protected
-        }))
+        })
+      )
 
+      // Apply filtering based on config if requested
+      if (filterByConfig) {
+        processedBranches = processedBranches.filter(
+          (branch: Branch) =>
+            !this.config.gitlab.sync?.branches.protected || !branch.protected
+        )
+        if (this.config.gitlab.sync?.branches.pattern) {
+          try {
+            const patternStr = this.config.gitlab.sync.branches.pattern
+            const regex = new RegExp(patternStr)
+            processedBranches = processedBranches.filter((branch: Branch) =>
+              regex.test(branch.name)
+            )
+            core.info(
+              `\x1b[36m🔍 Filtering branches with pattern: ${patternStr}\x1b[0m`
+            )
+          } catch (error) {
+            core.warning(
+              `\x1b[33m⚠️ Invalid branch pattern: ${this.config.gitlab.sync.branches.pattern}. Using all branches instead.\x1b[0m`
+            )
+          }
+        }
+      }
       core.info(
         `\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches (${processedBranches.map((branch: Branch) => branch.name).join(', ')})\x1b[0m`
       )
       return processedBranches
     } catch (error) {
-      core.warning(
+      core.setFailed(
         `\x1b[31m❌ Failed to Fetch GitLab Branches: ${error instanceof Error ? error.message : String(error)}\x1b[0m`
       )
       return []

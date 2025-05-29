@@ -57,7 +57,7 @@ export async function syncBranches(
   try {
     // Fetch branches from both repositories
     const sourceBranches = await source.syncBranches()
-    const targetBranches = await target.syncBranches()
+    const targetBranches = await target.syncAllBranches()
 
     // Compare branches and determine required actions
     const branchComparisons = compareBranches(sourceBranches, targetBranches)

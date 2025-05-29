@@ -17,7 +17,8 @@ export declare class GitHubClient implements IClient {
         repo: string;
     };
     validateAccess(): Promise<void>;
-    syncBranches(): Promise<import("@/src/types").Branch[]>;
+    syncBranches(filterByConfig?: boolean): Promise<import("@/src/types").Branch[]>;
+    syncAllBranches(): Promise<import("@/src/types").Branch[]>;
     createBranch(name: string, commitSha: string): Promise<void>;
     updateBranch(name: string, commitSha: string): Promise<void>;
     syncPullRequests(): Promise<PullRequest[]>;

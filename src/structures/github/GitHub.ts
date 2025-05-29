@@ -62,8 +62,12 @@ export class GitHubClient implements IClient {
   }
 
   // Delegate branch operations to ghBranchHelper
-  async syncBranches() {
-    return this.branches.sync()
+  async syncBranches(filterByConfig: boolean = true) {
+    return this.branches.sync(filterByConfig)
+  }
+
+  async syncAllBranches() {
+    return this.branches.sync(false)
   }
 
   async createBranch(name: string, commitSha: string) {

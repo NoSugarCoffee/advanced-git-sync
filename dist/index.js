@@ -52198,8 +52198,11 @@ class GitHubClient {
         return this.perms.validateAccess();
     }
     // Delegate branch operations to ghBranchHelper
-    async syncBranches() {
-        return this.branches.sync();
+    async syncBranches(filterByConfig = true) {
+        return this.branches.sync(filterByConfig);
+    }
+    async syncAllBranches() {
+        return this.branches.sync(false);
     }
     async createBranch(name, commitSha) {
         return this.branches.create(name, commitSha);
@@ -52320,21 +52323,35 @@ class githubBranchHelper {
         this.repo = repo;
         this.config = config;
     }
-    async sync() {
+    async sync(filterByConfig = true) {
         try {
             // Colorful console log for fetching branches
             core.info('\x1b[36m🌿 Fetching GitHub Branches...\x1b[0m');
-            // Remove the protected filter from the initial fetch to get all branches
+            // Fetch all branches
             const { data: branches } = await this.octokit.rest.repos.listBranches({
                 ...this.repo
             });
-            const processedBranches = branches
-                .filter((branch) => this.config.github.sync?.branches.protected || !branch.protected)
-                .map((branch) => ({
+            // Map branches to our internal format
+            let processedBranches = branches.map((branch) => ({
                 name: branch.name,
                 sha: branch.commit.sha,
                 protected: branch.protected
             }));
+            // Apply filtering based on config if requested
+            if (filterByConfig) {
+                processedBranches = processedBranches.filter((branch) => !this.config.github.sync?.branches.protected || !branch.protected);
+                if (this.config.github.sync?.branches.pattern) {
+                    try {
+                        const patternStr = this.config.github.sync.branches.pattern;
+                        const regex = new RegExp(patternStr);
+                        processedBranches = processedBranches.filter((branch) => regex.test(branch.name));
+                        core.info(`\x1b[36m🔍 Filtering branches with pattern: ${patternStr}\x1b[0m`);
+                    }
+                    catch (error) {
+                        core.warning(`\x1b[33m⚠️ Invalid branch pattern: ${this.config.github.sync.branches.pattern}. Using all branches instead.\x1b[0m`);
+                    }
+                }
+            }
             // Log successful branch fetch
             core.info(`\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches (${processedBranches.map((branch) => branch.name).join(', ')})\x1b[0m`);
             return processedBranches;
@@ -53251,8 +53268,11 @@ class GitLabClient {
         return this.perms.validateAccess();
     }
     // Delegate to branch helper
-    async syncBranches() {
-        return this.branches.sync();
+    async syncBranches(filterByConfig = true) {
+        return this.branches.sync(filterByConfig);
+    }
+    async syncAllBranches() {
+        return this.branches.sync(false);
     }
     async createBranch(name, commitSha) {
         return this.branches.create(name, commitSha);
@@ -53387,7 +53407,7 @@ class gitlabBranchHelper {
         }
         return null;
     }
-    async sync() {
+    async sync(filterByConfig = true) {
         try {
             core.info('\x1b[36m🌿 Fetching GitLab Branches...\x1b[0m');
             const projectId = await this.getProjectId();
@@ -53401,18 +53421,32 @@ class gitlabBranchHelper {
                     core.debug(`Extracted repo path: ${this.repoPath}`);
                 }
             }
-            const processedBranches = branches
-                .filter((branch) => this.config.gitlab.sync?.branches.protected || !branch.protected)
-                .map((branch) => ({
+            // Map branches to our internal format
+            let processedBranches = branches.map((branch) => ({
                 name: branch.name,
                 sha: branch.commit.id,
                 protected: branch.protected
             }));
+            // Apply filtering based on config if requested
+            if (filterByConfig) {
+                processedBranches = processedBranches.filter((branch) => !this.config.gitlab.sync?.branches.protected || !branch.protected);
+                if (this.config.gitlab.sync?.branches.pattern) {
+                    try {
+                        const patternStr = this.config.gitlab.sync.branches.pattern;
+                        const regex = new RegExp(patternStr);
+                        processedBranches = processedBranches.filter((branch) => regex.test(branch.name));
+                        core.info(`\x1b[36m🔍 Filtering branches with pattern: ${patternStr}\x1b[0m`);
+                    }
+                    catch (error) {
+                        core.warning(`\x1b[33m⚠️ Invalid branch pattern: ${this.config.gitlab.sync.branches.pattern}. Using all branches instead.\x1b[0m`);
+                    }
+                }
+            }
             core.info(`\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches (${processedBranches.map((branch) => branch.name).join(', ')})\x1b[0m`);
             return processedBranches;
         }
         catch (error) {
-            core.warning(`\x1b[31m❌ Failed to Fetch GitLab Branches: ${error instanceof Error ? error.message : String(error)}\x1b[0m`);
+            core.setFailed(`\x1b[31m❌ Failed to Fetch GitLab Branches: ${error instanceof Error ? error.message : String(error)}\x1b[0m`);
             return [];
         }
     }
@@ -54314,7 +54348,7 @@ async function syncBranches(source, target) {
     try {
         // Fetch branches from both repositories
         const sourceBranches = await source.syncBranches();
-        const targetBranches = await target.syncBranches();
+        const targetBranches = await target.syncAllBranches();
         // Compare branches and determine required actions
         const branchComparisons = compareBranches(sourceBranches, targetBranches);
         // Log sync plan

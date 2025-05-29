@@ -11,17 +11,16 @@ export class githubBranchHelper {
     private config: Config
   ) {}
 
-  async sync(): Promise<Branch[]> {
+  async sync(filterByConfig: boolean = true): Promise<Branch[]> {
     try {
       // Colorful console log for fetching branches
       core.info('\x1b[36m🌿 Fetching GitHub Branches...\x1b[0m')
 
-      // Remove the protected filter from the initial fetch to get all branches
+      // Fetch all branches
       const { data: branches } = await this.octokit.rest.repos.listBranches({
         ...this.repo
       })
 
-      // Then filter the branches based on the config
       interface GitHubBranch {
         name: string
         commit: {
@@ -30,16 +29,38 @@ export class githubBranchHelper {
         protected: boolean
       }
 
-      const processedBranches: Branch[] = branches
-        .filter(
-          (branch: GitHubBranch) =>
-            this.config.github.sync?.branches.protected || !branch.protected
-        )
-        .map((branch: GitHubBranch) => ({
+      // Map branches to our internal format
+      let processedBranches: Branch[] = branches.map(
+        (branch: GitHubBranch) => ({
           name: branch.name,
           sha: branch.commit.sha,
           protected: branch.protected
-        }))
+        })
+      )
+
+      // Apply filtering based on config if requested
+      if (filterByConfig) {
+        processedBranches = processedBranches.filter(
+          (branch: Branch) =>
+            !this.config.github.sync?.branches.protected || !branch.protected
+        )
+        if (this.config.github.sync?.branches.pattern) {
+          try {
+            const patternStr = this.config.github.sync.branches.pattern
+            const regex = new RegExp(patternStr)
+            processedBranches = processedBranches.filter((branch: Branch) =>
+              regex.test(branch.name)
+            )
+            core.info(
+              `\x1b[36m🔍 Filtering branches with pattern: ${patternStr}\x1b[0m`
+            )
+          } catch (error) {
+            core.warning(
+              `\x1b[33m⚠️ Invalid branch pattern: ${this.config.github.sync.branches.pattern}. Using all branches instead.\x1b[0m`
+            )
+          }
+        }
+      }
 
       // Log successful branch fetch
       core.info(
