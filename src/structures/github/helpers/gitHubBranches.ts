@@ -90,7 +90,7 @@ export class githubBranchHelper {
 
       await exec.exec(
         'git',
-        ['push', 'github', `${commitSha}:refs/heads/${name}`],
+        ['push', '-f', 'github', `${commitSha}:refs/heads/${name}`],
         { cwd: tmpDir }
       )
 

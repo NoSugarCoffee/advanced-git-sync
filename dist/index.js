@@ -52368,7 +52368,7 @@ class githubBranchHelper {
             await exec.exec('git', ['remote', 'add', 'github', githubAuthUrl], {
                 cwd: tmpDir
             });
-            await exec.exec('git', ['push', 'github', `${commitSha}:refs/heads/${name}`], { cwd: tmpDir });
+            await exec.exec('git', ['push', '-f', 'github', `${commitSha}:refs/heads/${name}`], { cwd: tmpDir });
             fs.rmSync(tmpDir, { recursive: true, force: true });
         }
         catch (error) {
@@ -53412,12 +53412,7 @@ class gitlabBranchHelper {
             return processedBranches;
         }
         catch (error) {
-            if (error instanceof Error) {
-                core.warning(`\x1b[31m❌ Failed to Fetch GitLab Branches: ${error.message}\x1b[0m`);
-            }
-            else {
-                core.warning(`\x1b[31m❌ Failed to Fetch GitLab Branches: ${String(error)}\x1b[0m`);
-            }
+            core.warning(`\x1b[31m❌ Failed to Fetch GitLab Branches: ${error instanceof Error ? error.message : String(error)}\x1b[0m`);
             return [];
         }
     }
@@ -53454,7 +53449,7 @@ class gitlabBranchHelper {
             await exec.exec('git', ['remote', 'add', 'gitlab', gitlabAuthUrl], {
                 cwd: tmpDir
             });
-            await exec.exec('git', ['push', 'gitlab', `${commitSha}:refs/heads/${name}`], { cwd: tmpDir });
+            await exec.exec('git', ['push', '-f', 'gitlab', `${commitSha}:refs/heads/${name}`], { cwd: tmpDir });
             fs.rmSync(tmpDir, { recursive: true, force: true });
         }
         catch (error) {
