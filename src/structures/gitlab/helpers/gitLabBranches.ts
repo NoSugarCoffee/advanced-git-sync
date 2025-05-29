@@ -5,6 +5,7 @@ import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as path from 'path'
 import * as fs from 'fs'
+import { GitbeakerRequestError } from '@gitbeaker/requester-utils'
 
 export class gitlabBranchHelper {
   private repoPath: string | null = null
@@ -68,9 +69,15 @@ export class gitlabBranchHelper {
       )
       return processedBranches
     } catch (error) {
-      core.warning(
-        `\x1b[31m❌ Failed to Fetch GitLab Branches: ${error instanceof Error ? error.message : String(error)}\x1b[0m`
-      )
+      if (error instanceof Error) {
+        core.warning(
+          `\x1b[31m❌ Failed to Fetch GitLab Branches: ${error.message}\x1b[0m`
+        )
+      } else {
+        core.warning(
+          `\x1b[31m❌ Failed to Fetch GitLab Branches: ${String(error)}\x1b[0m`
+        )
+      }
       return []
     }
   }
@@ -121,7 +128,7 @@ export class gitlabBranchHelper {
 
       await exec.exec(
         'git',
-        ['push', '-f', 'gitlab', `${commitSha}:refs/heads/${name}`],
+        ['push', 'gitlab', `${commitSha}:refs/heads/${name}`],
         { cwd: tmpDir }
       )
 
@@ -136,15 +143,6 @@ export class gitlabBranchHelper {
   }
 
   async create(name: string, commitSha: string): Promise<void> {
-    try {
-      const projectId = await this.getProjectId()
-      await this.gitlab.Branches.create(projectId, name, commitSha)
-    } catch (error) {
-      throw new Error(
-        `Failed to create branch ${name}: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      )
-    }
+    await this.update(name, commitSha)
   }
 }

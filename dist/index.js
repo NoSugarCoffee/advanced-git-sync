@@ -52308,6 +52308,9 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.githubBranchHelper = void 0;
 const core = __importStar(__nccwpck_require__(7484));
+const exec = __importStar(__nccwpck_require__(5236));
+const path = __importStar(__nccwpck_require__(6928));
+const fs = __importStar(__nccwpck_require__(9896));
 class githubBranchHelper {
     octokit;
     repo;
@@ -52342,34 +52345,38 @@ class githubBranchHelper {
             return [];
         }
     }
-    async create(name, commitSha) {
-        try {
-            // Create a new branch reference
-            await this.octokit.rest.git.createRef({
-                ...this.repo,
-                ref: `refs/heads/${name}`,
-                sha: commitSha
-            });
-        }
-        catch (error) {
-            // Throw a descriptive error if branch creation fails
-            throw new Error(`Failed to create branch ${name}: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    }
     async update(name, commitSha) {
         try {
-            // Update an existing branch reference
-            await this.octokit.rest.git.updateRef({
-                ...this.repo,
-                ref: `refs/heads/${name}`,
-                sha: commitSha,
-                force: true
+            const tmpDir = path.join(process.cwd(), '.tmp-git');
+            if (!fs.existsSync(tmpDir)) {
+                fs.mkdirSync(tmpDir, { recursive: true });
+            }
+            await exec.exec('git', ['init'], { cwd: tmpDir });
+            await exec.exec('git', ['config', 'user.name', 'advanced-git-sync'], {
+                cwd: tmpDir
             });
+            await exec.exec('git', ['config', 'user.email', 'advanced-git-sync@users.noreply.github.com'], { cwd: tmpDir });
+            const gitlabUrl = this.config.gitlab.host || 'https://gitlab.com';
+            const gitlabRepoPath = this.config.gitlab.projectId
+                ? `${gitlabUrl}/api/v4/projects/${this.config.gitlab.projectId}`
+                : `${gitlabUrl}/${this.config.gitlab.owner}/${this.config.gitlab.repo}.git`;
+            await exec.exec('git', ['remote', 'add', 'gitlab', gitlabRepoPath], {
+                cwd: tmpDir
+            });
+            await exec.exec('git', ['fetch', 'gitlab', commitSha], { cwd: tmpDir });
+            const githubAuthUrl = `https://x-access-token:${this.config.github.token}@github.com/${this.config.github.owner}/${this.config.github.repo}.git`;
+            await exec.exec('git', ['remote', 'add', 'github', githubAuthUrl], {
+                cwd: tmpDir
+            });
+            await exec.exec('git', ['push', 'github', `${commitSha}:refs/heads/${name}`], { cwd: tmpDir });
+            fs.rmSync(tmpDir, { recursive: true, force: true });
         }
         catch (error) {
-            // Throw a descriptive error if branch update fails
-            throw new Error(`Failed to update branch ${name}: ${error instanceof Error ? error.message : String(error)}`);
+            throw new Error(`Failed to update branch ${name} on GitHub: ${String(error)}`);
         }
+    }
+    async create(name, commitSha) {
+        await this.update(name, commitSha);
     }
 }
 exports.githubBranchHelper = githubBranchHelper;
@@ -53405,7 +53412,12 @@ class gitlabBranchHelper {
             return processedBranches;
         }
         catch (error) {
-            core.warning(`\x1b[31m❌ Failed to Fetch GitLab Branches: ${error instanceof Error ? error.message : String(error)}\x1b[0m`);
+            if (error instanceof Error) {
+                core.warning(`\x1b[31m❌ Failed to Fetch GitLab Branches: ${error.message}\x1b[0m`);
+            }
+            else {
+                core.warning(`\x1b[31m❌ Failed to Fetch GitLab Branches: ${String(error)}\x1b[0m`);
+            }
             return [];
         }
     }
@@ -53442,7 +53454,7 @@ class gitlabBranchHelper {
             await exec.exec('git', ['remote', 'add', 'gitlab', gitlabAuthUrl], {
                 cwd: tmpDir
             });
-            await exec.exec('git', ['push', '-f', 'gitlab', `${commitSha}:refs/heads/${name}`], { cwd: tmpDir });
+            await exec.exec('git', ['push', 'gitlab', `${commitSha}:refs/heads/${name}`], { cwd: tmpDir });
             fs.rmSync(tmpDir, { recursive: true, force: true });
         }
         catch (error) {
@@ -53450,13 +53462,7 @@ class gitlabBranchHelper {
         }
     }
     async create(name, commitSha) {
-        try {
-            const projectId = await this.getProjectId();
-            await this.gitlab.Branches.create(projectId, name, commitSha);
-        }
-        catch (error) {
-            throw new Error(`Failed to create branch ${name}: ${error instanceof Error ? error.message : String(error)}`);
-        }
+        await this.update(name, commitSha);
     }
 }
 exports.gitlabBranchHelper = gitlabBranchHelper;

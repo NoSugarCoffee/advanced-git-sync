@@ -1,4 +1,7 @@
 import * as core from '@actions/core'
+import * as exec from '@actions/exec'
+import * as path from 'path'
+import * as fs from 'fs'
 import { Repository, Config, Branch } from '@src/types'
 
 export class githubBranchHelper {
@@ -52,40 +55,54 @@ export class githubBranchHelper {
     }
   }
 
-  async create(name: string, commitSha: string): Promise<void> {
+  async update(name: string, commitSha: string): Promise<void> {
     try {
-      // Create a new branch reference
-      await this.octokit.rest.git.createRef({
-        ...this.repo,
-        ref: `refs/heads/${name}`,
-        sha: commitSha
+      const tmpDir = path.join(process.cwd(), '.tmp-git')
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true })
+      }
+
+      await exec.exec('git', ['init'], { cwd: tmpDir })
+      await exec.exec('git', ['config', 'user.name', 'advanced-git-sync'], {
+        cwd: tmpDir
       })
+      await exec.exec(
+        'git',
+        ['config', 'user.email', 'advanced-git-sync@users.noreply.github.com'],
+        { cwd: tmpDir }
+      )
+
+      const gitlabUrl = this.config.gitlab.host || 'https://gitlab.com'
+      const gitlabRepoPath = this.config.gitlab.projectId
+        ? `${gitlabUrl}/api/v4/projects/${this.config.gitlab.projectId}`
+        : `${gitlabUrl}/${this.config.gitlab.owner}/${this.config.gitlab.repo}.git`
+
+      await exec.exec('git', ['remote', 'add', 'gitlab', gitlabRepoPath], {
+        cwd: tmpDir
+      })
+
+      await exec.exec('git', ['fetch', 'gitlab', commitSha], { cwd: tmpDir })
+
+      const githubAuthUrl = `https://x-access-token:${this.config.github.token}@github.com/${this.config.github.owner}/${this.config.github.repo}.git`
+      await exec.exec('git', ['remote', 'add', 'github', githubAuthUrl], {
+        cwd: tmpDir
+      })
+
+      await exec.exec(
+        'git',
+        ['push', 'github', `${commitSha}:refs/heads/${name}`],
+        { cwd: tmpDir }
+      )
+
+      fs.rmSync(tmpDir, { recursive: true, force: true })
     } catch (error) {
-      // Throw a descriptive error if branch creation fails
       throw new Error(
-        `Failed to create branch ${name}: ${
-          error instanceof Error ? error.message : String(error)
-        }`
+        `Failed to update branch ${name} on GitHub: ${String(error)}`
       )
     }
   }
 
-  async update(name: string, commitSha: string): Promise<void> {
-    try {
-      // Update an existing branch reference
-      await this.octokit.rest.git.updateRef({
-        ...this.repo,
-        ref: `refs/heads/${name}`,
-        sha: commitSha,
-        force: true
-      })
-    } catch (error) {
-      // Throw a descriptive error if branch update fails
-      throw new Error(
-        `Failed to update branch ${name}: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      )
-    }
+  async create(name: string, commitSha: string): Promise<void> {
+    await this.update(name, commitSha)
   }
 }
