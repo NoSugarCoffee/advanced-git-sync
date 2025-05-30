@@ -2,7 +2,7 @@ import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as path from 'path'
 import * as fs from 'fs'
-import { Repository, Config, Branch } from '@src/types'
+import { Repository, Config, Branch, BranchFilterOptions } from '@src/types'
 
 export class githubBranchHelper {
   constructor(
@@ -11,7 +11,7 @@ export class githubBranchHelper {
     private config: Config
   ) {}
 
-  async fetch(filterByConfig: boolean = true): Promise<Branch[]> {
+  async fetch(filterOptions?: BranchFilterOptions): Promise<Branch[]> {
     // Colorful console log for fetching branches
     core.info('\x1b[36m🌿 Fetching GitHub Branches...\x1b[0m')
 
@@ -35,23 +35,27 @@ export class githubBranchHelper {
       protected: branch.protected
     }))
 
-    // Apply filtering based on config if requested
-    if (filterByConfig) {
-      processedBranches = processedBranches.filter(
-        (branch: Branch) =>
-          !this.config.github.sync?.branches.protected || !branch.protected
-      )
-      if (this.config.github.sync?.branches.pattern) {
-        const patternStr = this.config.github.sync.branches.pattern
-        const regex = new RegExp(patternStr)
-        processedBranches = processedBranches.filter((branch: Branch) =>
+    // Apply filtering based on provided options
+    if (filterOptions) {
+      // Filter protected branches if specified
+      if (filterOptions.includeProtected === false) {
+        processedBranches = processedBranches.filter(
+          branch => !branch.protected
+        )
+      }
+
+      // Apply pattern filtering if specified
+      if (filterOptions.pattern) {
+        const regex = new RegExp(filterOptions.pattern)
+        processedBranches = processedBranches.filter(branch =>
           regex.test(branch.name)
         )
         core.info(
-          `\x1b[36m🔍 Filtering branches with pattern: ${patternStr}\x1b[0m`
+          `\x1b[36m🔍 Filtering branches with pattern: ${filterOptions.pattern}\x1b[0m`
         )
       }
     }
+
     // Log successful branch fetch
     core.info(
       `\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches (${processedBranches.map((branch: Branch) => branch.name).join(', ')})\x1b[0m`

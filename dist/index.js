@@ -52198,11 +52198,8 @@ class GitHubClient {
         return this.perms.validateAccess();
     }
     // Delegate branch operations to ghBranchHelper
-    async fetchBranches(filterByConfig = true) {
-        return this.branches.fetch(filterByConfig);
-    }
-    async fetchAllBranches() {
-        return this.branches.fetch(false);
+    async fetchBranches(filterOptions) {
+        return this.branches.fetch(filterOptions);
     }
     async createBranch(name, commitSha) {
         return this.branches.create(name, commitSha);
@@ -52323,7 +52320,7 @@ class githubBranchHelper {
         this.repo = repo;
         this.config = config;
     }
-    async fetch(filterByConfig = true) {
+    async fetch(filterOptions) {
         // Colorful console log for fetching branches
         core.info('\x1b[36m🌿 Fetching GitHub Branches...\x1b[0m');
         // Fetch all branches
@@ -52336,14 +52333,17 @@ class githubBranchHelper {
             sha: branch.commit.sha,
             protected: branch.protected
         }));
-        // Apply filtering based on config if requested
-        if (filterByConfig) {
-            processedBranches = processedBranches.filter((branch) => !this.config.github.sync?.branches.protected || !branch.protected);
-            if (this.config.github.sync?.branches.pattern) {
-                const patternStr = this.config.github.sync.branches.pattern;
-                const regex = new RegExp(patternStr);
-                processedBranches = processedBranches.filter((branch) => regex.test(branch.name));
-                core.info(`\x1b[36m🔍 Filtering branches with pattern: ${patternStr}\x1b[0m`);
+        // Apply filtering based on provided options
+        if (filterOptions) {
+            // Filter protected branches if specified
+            if (filterOptions.includeProtected === false) {
+                processedBranches = processedBranches.filter(branch => !branch.protected);
+            }
+            // Apply pattern filtering if specified
+            if (filterOptions.pattern) {
+                const regex = new RegExp(filterOptions.pattern);
+                processedBranches = processedBranches.filter(branch => regex.test(branch.name));
+                core.info(`\x1b[36m🔍 Filtering branches with pattern: ${filterOptions.pattern}\x1b[0m`);
             }
         }
         // Log successful branch fetch
@@ -53256,11 +53256,15 @@ class GitLabClient {
         return this.perms.validateAccess();
     }
     // Delegate to branch helper
-    async fetchBranches(filterByConfig = true) {
-        return this.branches.fetch(filterByConfig);
-    }
-    async fetchAllBranches() {
-        return this.branches.fetch(false);
+    async fetchBranches(filterOptions) {
+        if (!filterOptions && this.config.gitlab.sync?.branches) {
+            // Use config if no explicit filter options provided
+            return this.branches.fetch({
+                includeProtected: this.config.gitlab.sync.branches.protected,
+                pattern: this.config.gitlab.sync.branches.pattern
+            });
+        }
+        return this.branches.fetch(filterOptions);
     }
     async createBranch(name, commitSha) {
         return this.branches.create(name, commitSha);
@@ -53395,7 +53399,7 @@ class gitlabBranchHelper {
         }
         return null;
     }
-    async fetch(filterByConfig = true) {
+    async fetch(filterOptions) {
         core.info('\x1b[36m🌿 Fetching GitLab Branches...\x1b[0m');
         const projectId = await this.getProjectId();
         const branches = await this.gitlab.Branches.all(projectId);
@@ -53414,14 +53418,17 @@ class gitlabBranchHelper {
             sha: branch.commit.id,
             protected: branch.protected
         }));
-        // Apply filtering based on config if requested
-        if (filterByConfig) {
-            processedBranches = processedBranches.filter((branch) => !this.config.gitlab.sync?.branches.protected || !branch.protected);
-            if (this.config.gitlab.sync?.branches.pattern) {
-                const patternStr = this.config.gitlab.sync.branches.pattern;
-                const regex = new RegExp(patternStr);
-                processedBranches = processedBranches.filter((branch) => regex.test(branch.name));
-                core.info(`\x1b[36m🔍 Filtering branches with pattern: ${patternStr}\x1b[0m`);
+        // Apply filtering based on provided options or config
+        if (filterOptions) {
+            // Filter protected branches if specified
+            if (filterOptions.includeProtected === false) {
+                processedBranches = processedBranches.filter(branch => !branch.protected);
+            }
+            // Apply pattern filtering if specified
+            if (filterOptions.pattern) {
+                const regex = new RegExp(filterOptions.pattern);
+                processedBranches = processedBranches.filter(branch => regex.test(branch.name));
+                core.info(`\x1b[36m🔍 Filtering branches with pattern: ${filterOptions.pattern}\x1b[0m`);
             }
         }
         core.info(`\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches (${processedBranches.map((branch) => branch.name).join(', ')})\x1b[0m`);
@@ -54315,8 +54322,11 @@ function compareBranches(sourceBranches, targetBranches) {
 }
 async function syncBranches(source, target) {
     // Fetch branches from both repositories
-    const sourceBranches = await source.fetchBranches();
-    const targetBranches = await target.fetchAllBranches();
+    const sourceBranches = await source.fetchBranches({
+        includeProtected: source.config.github.sync?.branches.protected,
+        pattern: source.config.github.sync?.branches.pattern
+    });
+    const targetBranches = await target.fetchBranches();
     // Compare branches and determine required actions
     const branchComparisons = compareBranches(sourceBranches, targetBranches);
     // Log sync plan

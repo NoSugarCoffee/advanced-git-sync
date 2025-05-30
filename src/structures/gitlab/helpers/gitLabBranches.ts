@@ -1,6 +1,6 @@
 // src/structures/gitlab/helpers/gitlabBranches.ts
 
-import { Branch, Config } from '@/src/types'
+import { Branch, Config, BranchFilterOptions } from '@/src/types'
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as path from 'path'
@@ -30,7 +30,7 @@ export class gitlabBranchHelper {
     return null
   }
 
-  async fetch(filterByConfig: boolean = true): Promise<Branch[]> {
+  async fetch(filterOptions?: BranchFilterOptions): Promise<Branch[]> {
     core.info('\x1b[36m🌿 Fetching GitLab Branches...\x1b[0m')
 
     const projectId = await this.getProjectId()
@@ -58,23 +58,27 @@ export class gitlabBranchHelper {
       protected: branch.protected
     }))
 
-    // Apply filtering based on config if requested
-    if (filterByConfig) {
-      processedBranches = processedBranches.filter(
-        (branch: Branch) =>
-          !this.config.gitlab.sync?.branches.protected || !branch.protected
-      )
-      if (this.config.gitlab.sync?.branches.pattern) {
-        const patternStr = this.config.gitlab.sync.branches.pattern
-        const regex = new RegExp(patternStr)
-        processedBranches = processedBranches.filter((branch: Branch) =>
+    // Apply filtering based on provided options or config
+    if (filterOptions) {
+      // Filter protected branches if specified
+      if (filterOptions.includeProtected === false) {
+        processedBranches = processedBranches.filter(
+          branch => !branch.protected
+        )
+      }
+
+      // Apply pattern filtering if specified
+      if (filterOptions.pattern) {
+        const regex = new RegExp(filterOptions.pattern)
+        processedBranches = processedBranches.filter(branch =>
           regex.test(branch.name)
         )
         core.info(
-          `\x1b[36m🔍 Filtering branches with pattern: ${patternStr}\x1b[0m`
+          `\x1b[36m🔍 Filtering branches with pattern: ${filterOptions.pattern}\x1b[0m`
         )
       }
     }
+
     core.info(
       `\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches (${processedBranches.map((branch: Branch) => branch.name).join(', ')})\x1b[0m`
     )

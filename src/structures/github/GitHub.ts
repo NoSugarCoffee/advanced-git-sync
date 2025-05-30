@@ -10,7 +10,8 @@ import {
   Release,
   ReleaseAsset,
   Tag,
-  IClient
+  IClient,
+  BranchFilterOptions
 } from '@/src/types'
 import {
   githubBranchHelper,
@@ -62,12 +63,8 @@ export class GitHubClient implements IClient {
   }
 
   // Delegate branch operations to ghBranchHelper
-  async fetchBranches(filterByConfig: boolean = true) {
-    return this.branches.fetch(filterByConfig)
-  }
-
-  async fetchAllBranches() {
-    return this.branches.fetch(false)
+  async fetchBranches(filterOptions?: BranchFilterOptions) {
+    return this.branches.fetch(filterOptions)
   }
 
   async createBranch(name: string, commitSha: string) {

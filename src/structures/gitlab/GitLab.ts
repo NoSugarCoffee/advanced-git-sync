@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
 import { Gitlab } from '@gitbeaker/rest'
-import { Repository, Config, IClient } from '../../types'
+import { Repository, Config, IClient, BranchFilterOptions } from '../../types'
 import {
   gitlabBranchHelper,
   gitlabIssueHelper,
@@ -120,12 +120,15 @@ export class GitLabClient implements IClient {
   }
 
   // Delegate to branch helper
-  async fetchBranches(filterByConfig: boolean = true) {
-    return this.branches.fetch(filterByConfig)
-  }
-
-  async fetchAllBranches() {
-    return this.branches.fetch(false)
+  async fetchBranches(filterOptions?: BranchFilterOptions) {
+    if (!filterOptions && this.config.gitlab.sync?.branches) {
+      // Use config if no explicit filter options provided
+      return this.branches.fetch({
+        includeProtected: this.config.gitlab.sync.branches.protected,
+        pattern: this.config.gitlab.sync.branches.pattern
+      })
+    }
+    return this.branches.fetch(filterOptions)
   }
 
   async createBranch(name: string, commitSha: string) {

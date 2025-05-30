@@ -55,8 +55,12 @@ export async function syncBranches(
   target: GitHubClient | GitLabClient
 ): Promise<void> {
   // Fetch branches from both repositories
-  const sourceBranches = await source.fetchBranches()
-  const targetBranches = await target.fetchAllBranches()
+  const sourceBranches = await source.fetchBranches({
+    includeProtected: source.config.github.sync?.branches.protected,
+    pattern: source.config.github.sync?.branches.pattern
+  })
+
+  const targetBranches = await target.fetchBranches()
 
   // Compare branches and determine required actions
   const branchComparisons = compareBranches(sourceBranches, targetBranches)
