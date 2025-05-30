@@ -82,10 +82,6 @@ export class gitlabBranchHelper {
   }
 
   async update(name: string, commitSha: string): Promise<void> {
-    // Try getting path from  sync first
-    if (!this.repoPath) {
-      await this.fetch()
-    }
     if (!this.repoPath) {
       // If still no path, try getting path from config as last resort
       this.repoPath = this.getRepoPathFromConfig()
