@@ -52034,7 +52034,7 @@ async function run() {
     catch (error) {
         core.info('\x1b[90m--------------------------------------------\x1b[0m');
         if (error instanceof Error) {
-            core.setFailed(`\x1b[31m❌ Sync Failed: ${error.message}\x1b[0m`);
+            core.setFailed(`\x1b[31m❌ Sync Failed: ${error.message} ${error.stack} \x1b[0m`);
         }
         else {
             core.setFailed('\x1b[31m❌ An unexpected error occurred during synchronization\x1b[0m');
@@ -53428,44 +53428,40 @@ class gitlabBranchHelper {
         return processedBranches;
     }
     async update(name, commitSha) {
-        try {
-            // Try getting path from  sync first
-            if (!this.repoPath) {
-                await this.fetch();
-            }
-            if (!this.repoPath) {
-                // If still no path, try getting path from config as last resort
-                this.repoPath = this.getRepoPathFromConfig();
-                if (!this.repoPath) {
-                    throw new Error('Could not determine repository path');
-                }
-            }
-            const gitlabUrl = this.config.gitlab.host || 'https://gitlab.com';
-            const repoPath = `${gitlabUrl}/${this.repoPath}.git`;
-            const tmpDir = path.join(process.cwd(), '.tmp-git');
-            if (!fs.existsSync(tmpDir)) {
-                fs.mkdirSync(tmpDir, { recursive: true });
-            }
-            await exec.exec('git', ['init'], { cwd: tmpDir });
-            await exec.exec('git', ['config', 'user.name', 'advanced-git-sync'], {
-                cwd: tmpDir
-            });
-            await exec.exec('git', ['config', 'user.email', 'advanced-git-sync@users.noreply.github.com'], { cwd: tmpDir });
-            const githubUrl = `https://x-access-token:${this.config.github.token}@github.com/${this.config.github.owner}/${this.config.github.repo}.git`;
-            await exec.exec('git', ['remote', 'add', 'github', githubUrl], {
-                cwd: tmpDir
-            });
-            await exec.exec('git', ['fetch', 'github', commitSha], { cwd: tmpDir });
-            const gitlabAuthUrl = `https://oauth2:${this.config.gitlab.token}@${repoPath.replace('https://', '')}`;
-            await exec.exec('git', ['remote', 'add', 'gitlab', gitlabAuthUrl], {
-                cwd: tmpDir
-            });
-            await exec.exec('git', ['push', '-f', 'gitlab', `${commitSha}:refs/heads/${name}`], { cwd: tmpDir });
-            fs.rmSync(tmpDir, { recursive: true, force: true });
+        // Try getting path from  sync first
+        if (!this.repoPath) {
+            await this.fetch();
         }
-        catch (error) {
-            throw new Error(`Failed to update branch ${name}: ${error instanceof Error ? error.message : String(error)}`);
+        if (!this.repoPath) {
+            // If still no path, try getting path from config as last resort
+            this.repoPath = this.getRepoPathFromConfig();
+            if (!this.repoPath) {
+                throw new Error('Could not determine repository path');
+            }
         }
+        const gitlabUrl = this.config.gitlab.host || 'https://gitlab.com';
+        const repoPath = `${gitlabUrl}/${this.repoPath}.git`;
+        const tmpDir = path.join(process.cwd(), '.tmp-git');
+        if (!fs.existsSync(tmpDir)) {
+            fs.mkdirSync(tmpDir, { recursive: true });
+        }
+        await exec.exec('git', ['init'], { cwd: tmpDir });
+        await exec.exec('git', ['config', 'user.name', 'advanced-git-sync'], {
+            cwd: tmpDir
+        });
+        await exec.exec('git', ['config', 'user.email', 'advanced-git-sync@users.noreply.github.com'], { cwd: tmpDir });
+        const githubUrl = `https://x-access-token:${this.config.github.token}@github.com/${this.config.github.owner}/${this.config.github.repo}.git`;
+        await exec.exec('git', ['remote', 'add', 'github', githubUrl], {
+            cwd: tmpDir
+        });
+        await exec.exec('git', ['fetch', 'github', commitSha], { cwd: tmpDir });
+        const gitlabAuthUrl = `https://oauth2:${this.config.gitlab.token}@${repoPath.replace('https://', '')}`;
+        await exec.exec('git', ['remote', 'add', 'gitlab', gitlabAuthUrl], {
+            cwd: tmpDir
+        });
+        console.log(`git push -f gitlab ${commitSha}:refs/heads/${name}`);
+        await exec.exec('git', ['push', '-f', 'gitlab', `${commitSha}:refs/heads/${name}`], { cwd: tmpDir });
+        fs.rmSync(tmpDir, { recursive: true, force: true });
     }
     async create(name, commitSha) {
         await this.update(name, commitSha);
@@ -54322,37 +54318,29 @@ function compareBranches(sourceBranches, targetBranches) {
     return comparisons;
 }
 async function syncBranches(source, target) {
-    try {
-        // Fetch branches from both repositories
-        const sourceBranches = await source.fetchBranches();
-        const targetBranches = await target.fetchAllBranches();
-        // Compare branches and determine required actions
-        const branchComparisons = compareBranches(sourceBranches, targetBranches);
-        // Log sync plan
-        core.info('\n🔍 Branch Sync Analysis:');
-        logSyncPlan(branchComparisons);
-        // Process each branch according to its required action
-        for (const comparison of branchComparisons) {
-            switch (comparison.action) {
-                case 'create':
-                    await createBranch(target, comparison);
-                    break;
-                case 'update':
-                    await updateBranch(target, comparison);
-                    break;
-                case 'skip':
-                    core.info(`⏭️ Skipping ${comparison.name} - already in sync`);
-                    break;
-            }
+    // Fetch branches from both repositories
+    const sourceBranches = await source.fetchBranches();
+    const targetBranches = await target.fetchAllBranches();
+    // Compare branches and determine required actions
+    const branchComparisons = compareBranches(sourceBranches, targetBranches);
+    // Log sync plan
+    core.info('\n🔍 Branch Sync Analysis:');
+    logSyncPlan(branchComparisons);
+    // Process each branch according to its required action
+    for (const comparison of branchComparisons) {
+        switch (comparison.action) {
+            case 'create':
+                await createBranch(target, comparison);
+                break;
+            case 'update':
+                await updateBranch(target, comparison);
+                break;
+            case 'skip':
+                core.info(`⏭️ Skipping ${comparison.name} - already in sync`);
+                break;
         }
-        core.info('✓ Branch synchronization completed');
     }
-    catch (error) {
-        core.error(`Branch synchronization failed: ${error instanceof Error
-            ? error.message + '\n' + error.stack
-            : String(error)}`);
-        throw error;
-    }
+    core.info('✓ Branch synchronization completed');
 }
 async function createBranch(target, comparison) {
     core.info(`🌱 Creating branch ${comparison.name}`);

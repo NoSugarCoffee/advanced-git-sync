@@ -54,43 +54,32 @@ export async function syncBranches(
   source: GitHubClient | GitLabClient,
   target: GitHubClient | GitLabClient
 ): Promise<void> {
-  try {
-    // Fetch branches from both repositories
-    const sourceBranches = await source.fetchBranches()
-    const targetBranches = await target.fetchAllBranches()
+  // Fetch branches from both repositories
+  const sourceBranches = await source.fetchBranches()
+  const targetBranches = await target.fetchAllBranches()
 
-    // Compare branches and determine required actions
-    const branchComparisons = compareBranches(sourceBranches, targetBranches)
+  // Compare branches and determine required actions
+  const branchComparisons = compareBranches(sourceBranches, targetBranches)
 
-    // Log sync plan
-    core.info('\n🔍 Branch Sync Analysis:')
-    logSyncPlan(branchComparisons)
+  // Log sync plan
+  core.info('\n🔍 Branch Sync Analysis:')
+  logSyncPlan(branchComparisons)
 
-    // Process each branch according to its required action
-    for (const comparison of branchComparisons) {
-      switch (comparison.action) {
-        case 'create':
-          await createBranch(target, comparison)
-          break
-        case 'update':
-          await updateBranch(target, comparison)
-          break
-        case 'skip':
-          core.info(`⏭️ Skipping ${comparison.name} - already in sync`)
-          break
-      }
+  // Process each branch according to its required action
+  for (const comparison of branchComparisons) {
+    switch (comparison.action) {
+      case 'create':
+        await createBranch(target, comparison)
+        break
+      case 'update':
+        await updateBranch(target, comparison)
+        break
+      case 'skip':
+        core.info(`⏭️ Skipping ${comparison.name} - already in sync`)
+        break
     }
-    core.info('✓ Branch synchronization completed')
-  } catch (error) {
-    core.error(
-      `Branch synchronization failed: ${
-        error instanceof Error
-          ? error.message + '\n' + error.stack
-          : String(error)
-      }`
-    )
-    throw error
   }
+  core.info('✓ Branch synchronization completed')
 }
 
 async function createBranch(
