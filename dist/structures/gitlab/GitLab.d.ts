@@ -24,8 +24,8 @@ export declare class GitLabClient implements IClient {
         repo: string;
     };
     validateAccess(): Promise<void>;
-    syncBranches(filterByConfig?: boolean): Promise<import("../../types").Branch[]>;
-    syncAllBranches(): Promise<import("../../types").Branch[]>;
+    fetchBranches(filterByConfig?: boolean): Promise<import("../../types").Branch[]>;
+    fetchAllBranches(): Promise<import("../../types").Branch[]>;
     createBranch(name: string, commitSha: string): Promise<void>;
     updateBranch(name: string, commitSha: string): Promise<void>;
     syncPullRequests(): Promise<import("../../types").PullRequest[]>;

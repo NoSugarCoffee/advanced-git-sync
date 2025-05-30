@@ -30,77 +30,62 @@ export class gitlabBranchHelper {
     return null
   }
 
-  async sync(filterByConfig: boolean = true): Promise<Branch[]> {
-    try {
-      core.info('\x1b[36m🌿 Fetching GitLab Branches...\x1b[0m')
+  async fetch(filterByConfig: boolean = true): Promise<Branch[]> {
+    core.info('\x1b[36m🌿 Fetching GitLab Branches...\x1b[0m')
 
-      const projectId = await this.getProjectId()
-      const branches = await this.gitlab.Branches.all(projectId)
-      // Extract repo path from first branch API URL
-      if (branches.length > 0 && !this.repoPath) {
-        const apiUrl = branches[0]._links?.self || ''
-        const match = apiUrl.match(/projects\/(.+?)\/repository/)
-        if (match) {
-          this.repoPath = decodeURIComponent(match[1])
-          core.debug(`Extracted repo path: ${this.repoPath}`)
-        }
+    const projectId = await this.getProjectId()
+    const branches = await this.gitlab.Branches.all(projectId)
+    // Extract repo path from first branch API URL
+    if (branches.length > 0 && !this.repoPath) {
+      const apiUrl = branches[0]._links?.self || ''
+      const match = apiUrl.match(/projects\/(.+?)\/repository/)
+      if (match) {
+        this.repoPath = decodeURIComponent(match[1])
+        core.debug(`Extracted repo path: ${this.repoPath}`)
       }
-
-      interface GitLabBranch {
-        name: string
-        commit: { id: string }
-        protected: boolean
-      }
-
-      // Map branches to our internal format
-      let processedBranches: Branch[] = branches.map(
-        (branch: GitLabBranch) => ({
-          name: branch.name,
-          sha: branch.commit.id,
-          protected: branch.protected
-        })
-      )
-
-      // Apply filtering based on config if requested
-      if (filterByConfig) {
-        processedBranches = processedBranches.filter(
-          (branch: Branch) =>
-            !this.config.gitlab.sync?.branches.protected || !branch.protected
-        )
-        if (this.config.gitlab.sync?.branches.pattern) {
-          try {
-            const patternStr = this.config.gitlab.sync.branches.pattern
-            const regex = new RegExp(patternStr)
-            processedBranches = processedBranches.filter((branch: Branch) =>
-              regex.test(branch.name)
-            )
-            core.info(
-              `\x1b[36m🔍 Filtering branches with pattern: ${patternStr}\x1b[0m`
-            )
-          } catch (error) {
-            core.warning(
-              `\x1b[33m⚠️ Invalid branch pattern: ${this.config.gitlab.sync.branches.pattern}. Using all branches instead.\x1b[0m`
-            )
-          }
-        }
-      }
-      core.info(
-        `\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches (${processedBranches.map((branch: Branch) => branch.name).join(', ')})\x1b[0m`
-      )
-      return processedBranches
-    } catch (error) {
-      core.setFailed(
-        `\x1b[31m❌ Failed to Fetch GitLab Branches: ${error instanceof Error ? error.message : String(error)}\x1b[0m`
-      )
-      return []
     }
+
+    interface GitLabBranch {
+      name: string
+      commit: { id: string }
+      protected: boolean
+    }
+
+    // Map branches to our internal format
+    let processedBranches: Branch[] = branches.map((branch: GitLabBranch) => ({
+      name: branch.name,
+      sha: branch.commit.id,
+      protected: branch.protected
+    }))
+
+    // Apply filtering based on config if requested
+    if (filterByConfig) {
+      processedBranches = processedBranches.filter(
+        (branch: Branch) =>
+          !this.config.gitlab.sync?.branches.protected || !branch.protected
+      )
+      if (this.config.gitlab.sync?.branches.pattern) {
+        const patternStr = this.config.gitlab.sync.branches.pattern
+        const regex = new RegExp(patternStr)
+        processedBranches = processedBranches.filter((branch: Branch) =>
+          regex.test(branch.name)
+        )
+        core.info(
+          `\x1b[36m🔍 Filtering branches with pattern: ${patternStr}\x1b[0m`
+        )
+      }
+    }
+    core.info(
+      `\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches (${processedBranches.map((branch: Branch) => branch.name).join(', ')})\x1b[0m`
+    )
+    return processedBranches
   }
 
   async update(name: string, commitSha: string): Promise<void> {
     try {
       // Try getting path from  sync first
       if (!this.repoPath) {
-        await this.sync()
+        await this.fetch()
       }
       if (!this.repoPath) {
         // If still no path, try getting path from config as last resort

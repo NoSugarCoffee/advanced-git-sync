@@ -11,69 +11,52 @@ export class githubBranchHelper {
     private config: Config
   ) {}
 
-  async sync(filterByConfig: boolean = true): Promise<Branch[]> {
-    try {
-      // Colorful console log for fetching branches
-      core.info('\x1b[36m🌿 Fetching GitHub Branches...\x1b[0m')
+  async fetch(filterByConfig: boolean = true): Promise<Branch[]> {
+    // Colorful console log for fetching branches
+    core.info('\x1b[36m🌿 Fetching GitHub Branches...\x1b[0m')
 
-      // Fetch all branches
-      const { data: branches } = await this.octokit.rest.repos.listBranches({
-        ...this.repo
-      })
+    // Fetch all branches
+    const { data: branches } = await this.octokit.rest.repos.listBranches({
+      ...this.repo
+    })
 
-      interface GitHubBranch {
-        name: string
-        commit: {
-          sha: string
-        }
-        protected: boolean
+    interface GitHubBranch {
+      name: string
+      commit: {
+        sha: string
       }
-
-      // Map branches to our internal format
-      let processedBranches: Branch[] = branches.map(
-        (branch: GitHubBranch) => ({
-          name: branch.name,
-          sha: branch.commit.sha,
-          protected: branch.protected
-        })
-      )
-
-      // Apply filtering based on config if requested
-      if (filterByConfig) {
-        processedBranches = processedBranches.filter(
-          (branch: Branch) =>
-            !this.config.github.sync?.branches.protected || !branch.protected
-        )
-        if (this.config.github.sync?.branches.pattern) {
-          try {
-            const patternStr = this.config.github.sync.branches.pattern
-            const regex = new RegExp(patternStr)
-            processedBranches = processedBranches.filter((branch: Branch) =>
-              regex.test(branch.name)
-            )
-            core.info(
-              `\x1b[36m🔍 Filtering branches with pattern: ${patternStr}\x1b[0m`
-            )
-          } catch (error) {
-            core.warning(
-              `\x1b[33m⚠️ Invalid branch pattern: ${this.config.github.sync.branches.pattern}. Using all branches instead.\x1b[0m`
-            )
-          }
-        }
-      }
-
-      // Log successful branch fetch
-      core.info(
-        `\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches (${processedBranches.map((branch: Branch) => branch.name).join(', ')})\x1b[0m`
-      )
-      return processedBranches
-    } catch (error) {
-      // Error handling with colorful console warning
-      core.warning(
-        `\x1b[31m❌ Failed to Fetch GitHub Branches: ${error instanceof Error ? error.message : String(error)}\x1b[0m`
-      )
-      return []
+      protected: boolean
     }
+
+    // Map branches to our internal format
+    let processedBranches: Branch[] = branches.map((branch: GitHubBranch) => ({
+      name: branch.name,
+      sha: branch.commit.sha,
+      protected: branch.protected
+    }))
+
+    // Apply filtering based on config if requested
+    if (filterByConfig) {
+      processedBranches = processedBranches.filter(
+        (branch: Branch) =>
+          !this.config.github.sync?.branches.protected || !branch.protected
+      )
+      if (this.config.github.sync?.branches.pattern) {
+        const patternStr = this.config.github.sync.branches.pattern
+        const regex = new RegExp(patternStr)
+        processedBranches = processedBranches.filter((branch: Branch) =>
+          regex.test(branch.name)
+        )
+        core.info(
+          `\x1b[36m🔍 Filtering branches with pattern: ${patternStr}\x1b[0m`
+        )
+      }
+    }
+    // Log successful branch fetch
+    core.info(
+      `\x1b[32m✓ Branches Fetched: ${processedBranches.length} branches (${processedBranches.map((branch: Branch) => branch.name).join(', ')})\x1b[0m`
+    )
+    return processedBranches
   }
 
   async update(name: string, commitSha: string): Promise<void> {

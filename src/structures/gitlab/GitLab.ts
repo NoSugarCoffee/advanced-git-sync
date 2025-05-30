@@ -120,12 +120,12 @@ export class GitLabClient implements IClient {
   }
 
   // Delegate to branch helper
-  async syncBranches(filterByConfig: boolean = true) {
-    return this.branches.sync(filterByConfig)
+  async fetchBranches(filterByConfig: boolean = true) {
+    return this.branches.fetch(filterByConfig)
   }
 
-  async syncAllBranches() {
-    return this.branches.sync(false)
+  async fetchAllBranches() {
+    return this.branches.fetch(false)
   }
 
   async createBranch(name: string, commitSha: string) {

@@ -56,8 +56,8 @@ export async function syncBranches(
 ): Promise<void> {
   try {
     // Fetch branches from both repositories
-    const sourceBranches = await source.syncBranches()
-    const targetBranches = await target.syncAllBranches()
+    const sourceBranches = await source.fetchBranches()
+    const targetBranches = await target.fetchAllBranches()
 
     // Compare branches and determine required actions
     const branchComparisons = compareBranches(sourceBranches, targetBranches)
@@ -114,13 +114,6 @@ async function updateBranch(
   target: GitHubClient | GitLabClient,
   comparison: BranchComparison
 ): Promise<void> {
-  if (comparison.protected) {
-    core.warning(
-      `⚠️ Skipping protected branch ${comparison.name} - manual update required`
-    )
-    return
-  }
-
   core.info(`📝 Updating branch ${comparison.name}`)
   // Implementation will be handled by the specific client (GitHub/GitLab)
   await target.updateBranch(comparison.name, comparison.sourceCommit)
