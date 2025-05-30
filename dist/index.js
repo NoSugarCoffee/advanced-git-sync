@@ -54348,7 +54348,9 @@ async function syncBranches(source, target) {
         core.info('✓ Branch synchronization completed');
     }
     catch (error) {
-        core.error(`Branch synchronization failed: ${error instanceof Error ? JSON.stringify(error, null, 2) : String(error)}`);
+        core.error(`Branch synchronization failed: ${error instanceof Error
+            ? error.message + '\n' + error.stack
+            : String(error)}`);
         throw error;
     }
 }

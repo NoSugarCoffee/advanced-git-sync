@@ -84,7 +84,9 @@ export async function syncBranches(
   } catch (error) {
     core.error(
       `Branch synchronization failed: ${
-        error instanceof Error ? JSON.stringify(error, null, 2) : String(error)
+        error instanceof Error
+          ? error.message + '\n' + error.stack
+          : String(error)
       }`
     )
     throw error
