@@ -52333,13 +52333,10 @@ class githubBranchHelper {
             sha: branch.commit.sha,
             protected: branch.protected
         }));
-        // Apply filtering based on provided options
         if (filterOptions) {
-            // Filter protected branches if specified
             if (filterOptions.includeProtected === false) {
                 processedBranches = processedBranches.filter(branch => !branch.protected);
             }
-            // Apply pattern filtering if specified
             if (filterOptions.pattern) {
                 const regex = new RegExp(filterOptions.pattern);
                 processedBranches = processedBranches.filter(branch => regex.test(branch.name));
@@ -53418,13 +53415,10 @@ class gitlabBranchHelper {
             sha: branch.commit.id,
             protected: branch.protected
         }));
-        // Apply filtering based on provided options or config
         if (filterOptions) {
-            // Filter protected branches if specified
             if (filterOptions.includeProtected === false) {
                 processedBranches = processedBranches.filter(branch => !branch.protected);
             }
-            // Apply pattern filtering if specified
             if (filterOptions.pattern) {
                 const regex = new RegExp(filterOptions.pattern);
                 processedBranches = processedBranches.filter(branch => regex.test(branch.name));
