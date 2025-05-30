@@ -53452,10 +53452,10 @@ class gitlabBranchHelper {
             });
             await exec.exec('git', ['config', 'user.email', 'advanced-git-sync@users.noreply.github.com'], { cwd: tmpDir });
             const githubUrl = `https://x-access-token:${this.config.github.token}@github.com/${this.config.github.owner}/${this.config.github.repo}.git`;
-            await exec.exec('git', ['remote', 'add', 'gitHub', githubUrl], {
+            await exec.exec('git', ['remote', 'add', 'github', githubUrl], {
                 cwd: tmpDir
             });
-            await exec.exec('git', ['fetch', 'gitHub', commitSha], { cwd: tmpDir });
+            await exec.exec('git', ['fetch', 'github', commitSha], { cwd: tmpDir });
             const gitlabAuthUrl = `https://oauth2:${this.config.gitlab.token}@${repoPath.replace('https://', '')}`;
             await exec.exec('git', ['remote', 'add', 'gitlab', gitlabAuthUrl], {
                 cwd: tmpDir
@@ -54333,27 +54333,22 @@ async function syncBranches(source, target) {
         logSyncPlan(branchComparisons);
         // Process each branch according to its required action
         for (const comparison of branchComparisons) {
-            try {
-                switch (comparison.action) {
-                    case 'create':
-                        await createBranch(target, comparison);
-                        break;
-                    case 'update':
-                        await updateBranch(target, comparison);
-                        break;
-                    case 'skip':
-                        core.info(`⏭️ Skipping ${comparison.name} - already in sync`);
-                        break;
-                }
-            }
-            catch (error) {
-                core.warning(`Failed to process branch ${comparison.name}: ${error instanceof Error ? error.message : String(error)}`);
+            switch (comparison.action) {
+                case 'create':
+                    await createBranch(target, comparison);
+                    break;
+                case 'update':
+                    await updateBranch(target, comparison);
+                    break;
+                case 'skip':
+                    core.info(`⏭️ Skipping ${comparison.name} - already in sync`);
+                    break;
             }
         }
         core.info('✓ Branch synchronization completed');
     }
     catch (error) {
-        core.error(`Branch synchronization failed: ${error instanceof Error ? error.message : String(error)}`);
+        core.error(`Branch synchronization failed: ${error instanceof Error ? JSON.stringify(error, null, 2) : String(error)}`);
         throw error;
     }
 }

@@ -68,32 +68,23 @@ export async function syncBranches(
 
     // Process each branch according to its required action
     for (const comparison of branchComparisons) {
-      try {
-        switch (comparison.action) {
-          case 'create':
-            await createBranch(target, comparison)
-            break
-          case 'update':
-            await updateBranch(target, comparison)
-            break
-          case 'skip':
-            core.info(`⏭️ Skipping ${comparison.name} - already in sync`)
-            break
-        }
-      } catch (error) {
-        core.warning(
-          `Failed to process branch ${comparison.name}: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        )
+      switch (comparison.action) {
+        case 'create':
+          await createBranch(target, comparison)
+          break
+        case 'update':
+          await updateBranch(target, comparison)
+          break
+        case 'skip':
+          core.info(`⏭️ Skipping ${comparison.name} - already in sync`)
+          break
       }
     }
-
     core.info('✓ Branch synchronization completed')
   } catch (error) {
     core.error(
       `Branch synchronization failed: ${
-        error instanceof Error ? error.message : String(error)
+        error instanceof Error ? JSON.stringify(error, null, 2) : String(error)
       }`
     )
     throw error

@@ -114,11 +114,11 @@ export class gitlabBranchHelper {
       )
 
       const githubUrl = `https://x-access-token:${this.config.github.token}@github.com/${this.config.github.owner}/${this.config.github.repo}.git`
-      await exec.exec('git', ['remote', 'add', 'gitHub', githubUrl], {
+      await exec.exec('git', ['remote', 'add', 'github', githubUrl], {
         cwd: tmpDir
       })
 
-      await exec.exec('git', ['fetch', 'gitHub', commitSha], { cwd: tmpDir })
+      await exec.exec('git', ['fetch', 'github', commitSha], { cwd: tmpDir })
 
       const gitlabAuthUrl = `https://oauth2:${this.config.gitlab.token}@${repoPath.replace('https://', '')}`
       await exec.exec('git', ['remote', 'add', 'gitlab', gitlabAuthUrl], {
