@@ -121,13 +121,6 @@ export class GitLabClient implements IClient {
 
   // Delegate to branch helper
   async fetchBranches(filterOptions?: BranchFilterOptions) {
-    if (!filterOptions && this.config.gitlab.sync?.branches) {
-      // Use config if no explicit filter options provided
-      return this.branches.fetch({
-        includeProtected: this.config.gitlab.sync.branches.protected,
-        pattern: this.config.gitlab.sync.branches.pattern
-      })
-    }
     return this.branches.fetch(filterOptions)
   }
 
