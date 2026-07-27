@@ -1,6 +1,7 @@
 // src/structures/gitlab/helpers/gitlabBranches.ts
 
 import { Branch, Config, BranchFilterOptions } from '@/src/types'
+import { filterBranches } from '@utils/branchFilter'
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as path from 'path'
@@ -59,21 +60,12 @@ export class gitlabBranchHelper {
     }))
 
     if (filterOptions) {
-      if (filterOptions.includeProtected === false) {
-        processedBranches = processedBranches.filter(
-          branch => !branch.protected
-        )
-      }
-
       if (filterOptions.pattern) {
-        const regex = new RegExp(filterOptions.pattern)
-        processedBranches = processedBranches.filter(branch =>
-          regex.test(branch.name)
-        )
         core.info(
           `\x1b[36m🔍 Filtering branches with pattern: ${filterOptions.pattern}\x1b[0m`
         )
       }
+      processedBranches = filterBranches(processedBranches, filterOptions)
     }
 
     core.info(

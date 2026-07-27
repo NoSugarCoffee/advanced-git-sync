@@ -9,7 +9,7 @@ export function getDefaultConfig(): Config {
         branches: {
           enabled: true,
           protected: true,
-          pattern: '*'
+          pattern: '**'
         },
         pullRequests: {
           enabled: true,
@@ -35,7 +35,7 @@ export function getDefaultConfig(): Config {
         branches: {
           enabled: true,
           protected: true,
-          pattern: '*'
+          pattern: '**'
         },
         pullRequests: {
           enabled: true,

@@ -120,11 +120,17 @@ github:
 
 #### Branches
 
-| Option      | Description             | Required | Default |
-| ----------- | ----------------------- | -------- | ------- |
-| `enabled`   | Enable branch sync      | No       | true    |
-| `protected` | Sync protected branches | No       | true    |
-| `pattern`   | Branch name pattern     | No       | "\*"    |
+| Option      | Description                                      | Required | Default |
+| ----------- | ------------------------------------------------ | -------- | ------- |
+| `enabled`   | Enable branch sync                               | No       | true    |
+| `protected` | Sync protected branches                          | No       | true    |
+| `pattern`   | Branch name glob (see [below](#branch-patterns)) | No       | "\*\*"  |
+
+##### Branch Patterns
+
+`pattern` is a glob, matched the same way GitHub Actions matches `on.push.branches` — `*` matches
+within a path segment, `**` matches across `/`, and `{a,b}` matches either alternative. Examples:
+`**` (every branch), `{main,master}`, `feature/*`, `release/**`.
 
 #### Pull Requests
 
@@ -172,7 +178,7 @@ gitlab:
     branches:
       enabled: true
       protected: true
-      pattern: '*'
+      pattern: '**'
 
     pullRequests:
       enabled: true
@@ -199,7 +205,7 @@ github:
     branches:
       enabled: true
       protected: true
-      pattern: '*'
+      pattern: '**'
 
     pullRequests:
       enabled: true

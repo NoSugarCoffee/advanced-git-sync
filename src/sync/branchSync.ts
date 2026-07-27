@@ -1,6 +1,6 @@
 // src/sync/branches.ts
 import * as core from '@actions/core'
-import { Branch, BranchComparison } from '../types'
+import { Branch, BranchComparison, BranchFilterOptions } from '../types'
 import { GitHubClient } from '../structures/github/GitHub'
 import { GitLabClient } from '../structures/gitlab/GitLab'
 
@@ -50,15 +50,26 @@ export function compareBranches(
   return comparisons
 }
 
+function getBranchFilter(
+  source: GitHubClient | GitLabClient
+): BranchFilterOptions {
+  const branchConfig =
+    source instanceof GitHubClient
+      ? source.config.github.sync?.branches
+      : source.config.gitlab.sync?.branches
+
+  return {
+    includeProtected: branchConfig?.protected,
+    pattern: branchConfig?.pattern
+  }
+}
+
 export async function syncBranches(
   source: GitHubClient | GitLabClient,
   target: GitHubClient | GitLabClient
 ): Promise<void> {
   // Fetch branches from both repositories
-  const sourceBranches = await source.fetchBranches({
-    includeProtected: source.config.github.sync?.branches.protected,
-    pattern: source.config.github.sync?.branches.pattern
-  })
+  const sourceBranches = await source.fetchBranches(getBranchFilter(source))
 
   const targetBranches = await target.fetchBranches()
 

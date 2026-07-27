@@ -1,5 +1,6 @@
+// Runs from the action checkout, which has no node_modules of its own:
+// depend on Node built-ins only.
 const fs = require('fs')
-const core = require('@actions/core')
 const { exec } = require('child_process')
 
 async function cleanup() {
@@ -50,7 +51,8 @@ async function cleanup() {
 
     console.log('Cleanup completed successfully')
   } catch (error) {
-    core.setFailed(`Cleanup failed: ${error.message}`)
+    process.stdout.write(`::error::Cleanup failed: ${error.message}\n`)
+    process.exitCode = 1
   }
 }
 
