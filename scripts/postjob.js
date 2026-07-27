@@ -51,7 +51,7 @@ async function cleanup() {
 
     console.log('Cleanup completed successfully')
   } catch (error) {
-    console.error(`::error::Cleanup failed: ${error.message}`)
+    process.stdout.write(`::error::Cleanup failed: ${error.message}\n`)
     process.exitCode = 1
   }
 }
