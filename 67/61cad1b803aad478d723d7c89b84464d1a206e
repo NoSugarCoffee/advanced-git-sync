@@ -1,0 +1,21 @@
+CHANGELOG.md
+  s_cf40642d8edb8b::t_fe2a26e2af551a 6-16
+package.json
+  s_cf40642d8edb8b::t_aa086ac14471e8 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "6761cad1b803aad478d723d7c89b84464d1a206e",
+  "prompts": {},
+  "sessions": {
+    "s_cf40642d8edb8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dce07e32-cb09-47ca-8511-243a0e4e748c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "liangliang.dai <liangliang.dai@trip.com>"
+    }
+  }
+}
