@@ -3,6 +3,7 @@ import * as exec from '@actions/exec'
 import * as path from 'path'
 import * as fs from 'fs'
 import { Repository, Config, Branch, BranchFilterOptions } from '@src/types'
+import { filterBranches } from '@utils/branchFilter'
 
 export class githubBranchHelper {
   constructor(
@@ -36,20 +37,12 @@ export class githubBranchHelper {
     }))
 
     if (filterOptions) {
-      if (filterOptions.includeProtected === false) {
-        processedBranches = processedBranches.filter(
-          branch => !branch.protected
-        )
-      }
       if (filterOptions.pattern) {
-        const regex = new RegExp(filterOptions.pattern)
-        processedBranches = processedBranches.filter(branch =>
-          regex.test(branch.name)
-        )
         core.info(
           `\x1b[36m🔍 Filtering branches with pattern: ${filterOptions.pattern}\x1b[0m`
         )
       }
+      processedBranches = filterBranches(processedBranches, filterOptions)
     }
 
     // Log successful branch fetch
